@@ -166,6 +166,10 @@ class ImageScraper(object):
             self.images.reverse()
         return self.images
 
+    def set_img_list(self, img_info):
+        self.images = img_info
+        self.no_to_download = len(self.images)
+
     def process_download_path(self):
         """ Processes the download path.
 
@@ -181,13 +185,14 @@ class ImageScraper(object):
             raise DirectoryCreateError
         return True
 
-    def download_image(self, img_url):
+    def download_image(self, img_info):
         """ Downloads a single image.
 
             Downloads img_url using self.page_url as base.
             Also, raises the appropriate exception if required.
         """
         img_request = None
+        sub_dir, filename, img_url = img_info
         try:
             img_request = requests.request(
                 'get', img_url, stream=True, proxies=self.proxies)
@@ -195,11 +200,10 @@ class ImageScraper(object):
                 raise ImageDownloadError(img_request.status_code)
         except:
             raise ImageDownloadError()
-
         if img_url[-3:] == "svg" or (int(img_request.headers['content-length']) > self.min_filesize and\
                                      int(img_request.headers['content-length']) < self.max_filesize):
             img_content = img_request.content
-            with open(os.path.join(self.download_path, img_url.split('/')[-1]), 'wb') as f:
+            with open(os.path.join(self.download_path, sub_dir, filename+'.'+img_url.split('/')[-1]), 'wb') as f:
                 byte_image = bytes(img_content)
                 f.write(byte_image)
         else:
@@ -215,12 +219,12 @@ class ImageScraper(object):
         return links_list
 
 
-def download_worker_fn(scraper, img_url, pbar, status_flags, status_lock):
+def download_worker_fn(scraper, img_info, pbar, status_flags, status_lock):
     """ Stnadalone function that downloads images. """
     failed = False
     size_failed = False
     try:
-        scraper.download_image(img_url)
+        scraper.download_image(img_info)
     except ImageDownloadError:
         failed = True
     except ImageSizeError:
