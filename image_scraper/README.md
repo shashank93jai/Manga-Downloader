@@ -1,0 +1,1 @@
+Cloned from https://github.com/sananth12/ImageScraper
